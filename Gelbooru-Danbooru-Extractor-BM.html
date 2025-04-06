@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gelbooru & Danbooru Tags Extractor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background-color: black; color: white; line-height: 1.6; padding: 15px; }
+    .container { max-width: 800px; width: 100%; margin: 0 auto; background-color: black; border: 1px solid #cc0000; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; overflow: hidden; }
+    h1 { color: white; text-align: center; margin-bottom: 20px; font-size: 24px; }
+    .tab-container { display: flex; border-bottom: 1px solid #cc0000; margin-bottom: 15px; }
+    .tab { padding: 10px 15px; cursor: pointer; background-color: black; border: 1px solid #cc0000; border-bottom: none; border-radius: 4px 4px 0 0; margin-right: 5px; font-weight: bold; }
+    .tab.active { background-color: black; border-bottom: 1px solid #cc0000; margin-bottom: -1px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .input-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; color: white; }
+    input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; transition: border-color 0.3s; }
+    input[type="text"]:focus { border-color: #cc0000; outline: none; }
+    button { background-color: #cc0000; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; transition: background-color 0.3s; }
+    button:hover { background-color: #910404; }
+    .result { margin: 15px 0; border: 1px solid #cc0000; border-radius: 4px; padding: 15px; background-color: black; min-height: 100px; white-space: pre-wrap; word-wrap: break-word; font-size: 14px; }
+    .status { margin: 10px 0; color: white; font-style: italic; font-size: 14px; }
+    .button-group { display: flex; align-items: center; margin: 10px 0; }
+    .copy-message { color: green; margin-left: 10px; opacity: 0; transition: opacity 0.3s; font-size: 14px; }
+    .show { opacity: 1; }
+    @media (max-width: 600px) {
+      .container { padding: 15px; }
+      h1 { font-size: 20px; }
+      button { padding: 8px 12px; font-size: 13px; }
+      .button-group { flex-direction: column; align-items: flex-start; }
+      .copy-message { margin-left: 0; margin-top: 5px; }
+      .tab { padding: 8px 10px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Gelbooru & Danbooru Tags Extractor</h1>
+    <div class="tab-container">
+      <div class="tab active" data-tab="gelbooru">Gelbooru</div>
+      <div class="tab" data-tab="danbooru">Danbooru</div>
+    </div>
+    <div class="tab-content active" id="gelbooru-tab">
+      <div class="input-group">
+        <label for="gelbooru-url-input">Enter Gelbooru URL:</label>
+        <input type="text" id="gelbooru-url-input" value="https://gelbooru.com/index.php?page=post&s=view&id=11724149&tags=nami_%28one_piece%29">
+      </div>
+      <button id="gelbooru-extract-btn">Extract Tags</button>
+    </div>
+    <div class="tab-content" id="danbooru-tab">
+      <div class="input-group">
+        <label for="danbooru-url-input">Enter Danbooru URL:</label>
+        <input type="text" id="danbooru-url-input" value="https://danbooru.donmai.us/posts/9106201?q=nami_%28one_piece%29">
+      </div>
+      <button id="danbooru-extract-btn">Extract Tags</button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="result" id="result"></div>
+    <div class="button-group">
+      <button id="copy-btn">Copy to Clipboard</button>
+      <span class="copy-message" id="copy-message">Copied to clipboard!</span>
+    </div>
+  </div>
+  </br>
+<center><p>Created by <a href="https://www.chapteria.com" target="_blank"><b><span style="color: red;">chapteria.com</span></b></a></p></center>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const tabs = document.querySelectorAll('.tab');
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+        });
+      });
+
+      const resultDiv = document.getElementById('result');
+      const statusDiv = document.getElementById('status');
+      const copyMessage = document.getElementById('copy-message');
+
+      document.getElementById('gelbooru-extract-btn').onclick = async () => {
+        const url = document.getElementById('gelbooru-url-input').value.trim();
+        if (!url.includes('gelbooru.com')) return statusDiv.textContent = 'Invalid Gelbooru URL';
+        statusDiv.textContent = 'Extracting tags...';
+        resultDiv.textContent = '';
+        try {
+          const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const title = doc.querySelector('title')?.textContent || '';
+          const cleaned = title.replace(/\s*-\s*Image View\s*-\s*\|\s*Gelbooru.*$/i, '').trim();
+          resultDiv.textContent = cleaned;
+          statusDiv.textContent = 'Tags extracted successfully!';
+        } catch (err) {
+          statusDiv.textContent = 'Failed to extract tags';
+        }
+      };
+
+      document.getElementById('danbooru-extract-btn').onclick = async () => {
+        const url = document.getElementById('danbooru-url-input').value.trim();
+        if (!url.includes('danbooru.donmai.us')) return statusDiv.textContent = 'Invalid Danbooru URL';
+        statusDiv.textContent = 'Extracting tags...';
+        resultDiv.textContent = '';
+        try {
+          const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const tags = Array.from(doc.querySelectorAll('li[data-tag-name]')).map(el => el.getAttribute('data-tag-name')?.replace(/_/g, ' '));
+          resultDiv.textContent = tags.filter(Boolean).join(', ');
+          statusDiv.textContent = 'Tags extracted successfully!';
+        } catch (err) {
+          statusDiv.textContent = 'Failed to extract tags';
+        }
+      };
+
+      document.getElementById('copy-btn').onclick = () => {
+        const text = resultDiv.textContent;
+        if (!text) return statusDiv.textContent = 'No tags to copy';
+        navigator.clipboard.writeText(text).then(() => {
+          copyMessage.classList.add('show');
+          setTimeout(() => copyMessage.classList.remove('show'), 2000);
+        });
+      };
+    });
+  </script>
+</body>
+</html>
