@@ -66,65 +66,76 @@
   </br>
 <center><p>Created by <a href="https://www.chapteria.com" target="_blank"><b><span style="color: red;">chapteria.com</span></b></a></p></center>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function () {
       const tabs = document.querySelectorAll('.tab');
       const tabContents = document.querySelectorAll('.tab-content');
       tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
+        tab.addEventListener('click', function () {
           tabs.forEach(t => t.classList.remove('active'));
           tabContents.forEach(c => c.classList.remove('active'));
-          tab.classList.add('active');
-          document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
+          this.classList.add('active');
+          document.getElementById(this.dataset.tab + '-tab').classList.add('active');
         });
       });
 
+      const proxy = 'https://api.allorigins.win/raw?url=';
+      const gelbooruExtractBtn = document.getElementById('gelbooru-extract-btn');
+      const danbooruExtractBtn = document.getElementById('danbooru-extract-btn');
       const resultDiv = document.getElementById('result');
       const statusDiv = document.getElementById('status');
+      const copyBtn = document.getElementById('copy-btn');
       const copyMessage = document.getElementById('copy-message');
 
-      document.getElementById('gelbooru-extract-btn').onclick = async () => {
+      function decodeEntities(input) {
+        const doc = new DOMParser().parseFromString(input, "text/html");
+        return doc.documentElement.textContent;
+      }
+
+      gelbooruExtractBtn.addEventListener('click', async () => {
         const url = document.getElementById('gelbooru-url-input').value.trim();
-        if (!url.includes('gelbooru.com')) return statusDiv.textContent = 'Invalid Gelbooru URL';
-        statusDiv.textContent = 'Extracting tags...';
         resultDiv.textContent = '';
+        statusDiv.textContent = 'Extracting from Gelbooru...';
+
         try {
-          const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
-          const html = await res.text();
-          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const res = await fetch(proxy + encodeURIComponent(url));
+          const text = await res.text();
+          const doc = new DOMParser().parseFromString(text, 'text/html');
           const title = doc.querySelector('title')?.textContent || '';
-          const cleaned = title.replace(/\s*-\s*Image View\s*-\s*\|\s*Gelbooru.*$/i, '').trim();
+          const cleaned = decodeEntities(title.replace(/\s*-\s*Image View\s*-\s*\|\s*Gelbooru.*$/i, '').trim());
           resultDiv.textContent = cleaned;
-          statusDiv.textContent = 'Tags extracted successfully!';
+          statusDiv.textContent = 'Tags extracted from Gelbooru.';
         } catch (err) {
-          statusDiv.textContent = 'Failed to extract tags';
+          statusDiv.textContent = 'Failed to fetch Gelbooru content.';
         }
-      };
+      });
 
-      document.getElementById('danbooru-extract-btn').onclick = async () => {
+      danbooruExtractBtn.addEventListener('click', async () => {
         const url = document.getElementById('danbooru-url-input').value.trim();
-        if (!url.includes('danbooru.donmai.us')) return statusDiv.textContent = 'Invalid Danbooru URL';
-        statusDiv.textContent = 'Extracting tags...';
         resultDiv.textContent = '';
-        try {
-          const res = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
-          const html = await res.text();
-          const doc = new DOMParser().parseFromString(html, 'text/html');
-          const tags = Array.from(doc.querySelectorAll('li[data-tag-name]')).map(el => el.getAttribute('data-tag-name')?.replace(/_/g, ' '));
-          resultDiv.textContent = tags.filter(Boolean).join(', ');
-          statusDiv.textContent = 'Tags extracted successfully!';
-        } catch (err) {
-          statusDiv.textContent = 'Failed to extract tags';
-        }
-      };
+        statusDiv.textContent = 'Extracting from Danbooru...';
 
-      document.getElementById('copy-btn').onclick = () => {
+        try {
+          const res = await fetch(proxy + encodeURIComponent(url));
+          const text = await res.text();
+          const doc = new DOMParser().parseFromString(text, 'text/html');
+          const tags = [...doc.querySelectorAll('[data-tag-name]')]
+            .map(e => e.getAttribute('data-tag-name').replace(/_/g, ' '))
+            .filter(Boolean);
+          resultDiv.textContent = tags.join(', ');
+          statusDiv.textContent = 'Tags extracted from Danbooru.';
+        } catch (err) {
+          statusDiv.textContent = 'Failed to fetch Danbooru content.';
+        }
+      });
+
+      copyBtn.addEventListener('click', () => {
         const text = resultDiv.textContent;
-        if (!text) return statusDiv.textContent = 'No tags to copy';
+        if (!text) return;
         navigator.clipboard.writeText(text).then(() => {
           copyMessage.classList.add('show');
           setTimeout(() => copyMessage.classList.remove('show'), 2000);
         });
-      };
+      });
     });
   </script>
 </body>
